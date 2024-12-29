@@ -1,0 +1,148 @@
+<?php
+######
+# THIS FILE IS ONLY AN EXAMPLE. PLEASE MODIFY AS REQUIRED.
+# Contributors: 
+#       Md. Rakibul Islam <rakibul.islam@sslwireless.com>
+#       Prabal Mallick <prabal.mallick@sslwireless.com>
+######
+
+error_reporting(0);
+ini_set('display_errors', 0);
+?>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="SSLCommerz">
+    <title>Successful Transaction - SSLCommerz</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+
+        .container {
+            margin-top: 50px;
+        }
+
+        h2 {
+            color: #28a745;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .text-danger {
+            color: #dc3545;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .table {
+            margin-top: 30px;
+        }
+
+        .btn-back {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .btn-back a {
+            color: #fff;
+            background-color: #007bff;
+            border-color: #007bff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .btn-back a:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8 offset-md-2">
+                <?php
+                require_once(__DIR__ . "/../lib/SslCommerzNotification.php");
+                include_once(__DIR__ . "/../db_connection.php");
+                include_once(__DIR__ . "/../OrderTransaction.php");
+
+                use SslCommerz\SslCommerzNotification;
+
+                $sslc = new SslCommerzNotification();
+                $tran_id = $_POST['tran_id'];
+                $amount =  $_POST['amount'];
+                $currency =  $_POST['currency'];
+                $cus_email =  $_POST['cus_email'];
+
+                $ot = new OrderTransaction();
+                $sql = $ot->getRecordQuery($tran_id);
+                $result = $conn_integration->query($sql);
+                $row = $result->fetch_array(MYSQLI_ASSOC);
+
+                if ($row['status'] == 'Pending' || $row['status'] == 'Processing') {
+                    $validated = $sslc->orderValidate($_POST, $tran_id, $amount, $currency);
+
+                    if ($validated) {
+                        $sql = $ot->updateTransactionQuery($tran_id, 'Processing');
+
+                        if ($conn_integration->query($sql) === TRUE) { ?>
+                            <h2>Congratulations! Your Transaction is Successful.</h2>
+                            <p>An email has been sent to you shortly for confirmation along with invoice and access to the Learning Management System.</p>
+                            <table class="table table-striped">
+                                <thead class="thead-dark">
+                                    <tr>
+                                        <th colspan="2">Payment Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="text-right">Transaction ID</td>
+                                        <td><?= $_POST['tran_id'] ?></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-right">Transaction Time</td>
+                                        <td><?= $_POST['tran_date'] ?></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-right">Payment Method</td>
+                                        <td><?= $_POST['card_issuer'] ?></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-right">Bank Transaction ID</td>
+                                        <td><?= $_POST['bank_tran_id'] ?></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-right">Amount</td>
+                                        <td><?= $_POST['amount'] . ' ' . $_POST['currency'] ?></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        <?php } else { ?>
+                            <div class="text-danger">Error updating record: <?= $conn_integration->error ?></div>
+                        <?php } ?>
+                    <?php } else { ?>
+                        <div class="text-danger">Payment was not valid. Please contact the merchant.</div>
+                    <?php } ?>
+                <?php } else { ?>
+                    <div class="text-danger">Invalid Information.</div>
+                <?php } ?>
+                <div class="btn-back">
+                    <a href="index.php">Go Back to Home</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
